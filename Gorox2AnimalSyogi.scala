@@ -1,70 +1,93 @@
-class Gorox2AnimalSyogi(playFirst: Player, drawFirst: Player) {
+import scala.collection.mutable
+import Console.{GREEN, BLUE, RESET}
+
+class Gorox2AnimalSyogi(pfColor: String, dfColor: String) {
     import Koma._
 
     private abstract class Koma {
         val icon: Char
-        val side: Player
+        val color: String
     }
 
     private object Koma {
-        def lion(side: Player): Koma = 
-            new LionKoma(side)
+        def raion(color: String): Koma = 
+            new RaionKoma(color)
 
-        def dog(side: Player): Koma = 
-            new DogKoma(side)
+        def inu(color: String): Koma = 
+            new InuKoma(color)
 
-        def cat(side: Player): Koma = 
-            new CatKoma(side)
+        def neko(color: String): Koma = 
+            new NekoKoma(color)
 
-        def chick(side: Player): Koma = 
-            new ChickKoma(side)
+        def hiyoko(color: String): Koma = 
+            new HiyokoKoma(color)
 
-        def chicken(side: Player): Koma = 
-            new ChickenKoma(side)
+        def tori(color: String): Koma = 
+            new ToriKoma(color)
 
-        private class LionKoma(val side: Player) extends Koma {
-            val icon = 'ら'
+        private class RaionKoma(val color: String) extends Koma {
+            val icon = 'R'
         }
 
-        private class DogKoma(val side: Player) extends Koma {
-            val icon = 'い'
+        private class InuKoma(val color: String) extends Koma {
+            val icon = 'I'
         }
 
-        private class CatKoma(val side: Player) extends Koma {
-            val icon = 'ね'
+        private class NekoKoma(val color: String) extends Koma {
+            val icon = 'N'
         }
 
-        private class ChickKoma(val side: Player) extends Koma {
-            val icon = 'ひ'
+        private class HiyokoKoma(val color: String) extends Koma {
+            val icon = 'H'
         }
 
-        private class ChickenKoma(val side: Player) extends Koma {
-            val icon = 'に'
+        private class ToriKoma(val color: String) extends Koma {
+            val icon = 'T'
         }
     }
 
-    private var nowPlayer = playFirst
-    private var mainField: Array[Array[Koma]] = Array(
-        Array(cat(drawFirst), dog(drawFirst), lion(drawFirst), dog(drawFirst), cat(drawFirst)),
+    private val mainField: Array[Array[Koma]] = Array(
+        Array(neko(dfColor), inu(dfColor), raion(dfColor), inu(dfColor), neko(dfColor)),
         Array(null, null, null, null, null),
-        Array(null, chick(drawFirst), chick(drawFirst), chick(drawFirst), null),
-        Array(null, chick(playFirst), chick(playFirst), chick(playFirst), null),
+        Array(null, hiyoko(dfColor), hiyoko(dfColor), hiyoko(dfColor), null),
+        Array(null, hiyoko(pfColor), hiyoko(pfColor), hiyoko(pfColor), null),
         Array(null, null, null, null, null),
-        Array(cat(playFirst), dog(playFirst), lion(playFirst), dog(playFirst), cat(playFirst))
+        Array(neko(pfColor), inu(pfColor), raion(pfColor), inu(pfColor), neko(pfColor))
     )
-    private var subField: Array[Array[Koma]] = Array(
-        Array(null, null, null, null),
-        Array(null, null, null, null),
-        Array(null, null, null, null),
-        Array(null, null, null, null)
-    )
+
+    def makeField(nowPlayer: Player, otherPlayer: Player): String = {        
+        s"${"=" * 29}\n" + 
+        s"${" " * 18}${(otherPlayer.own_koma.map[String] {
+            case (icon, count) => s"${otherPlayer.color}${icon}:${count}${RESET}"
+        }).mkString(" ")}\n" + 
+        s"${"=" * 29}\n\n" + 
+        s"${" " * 6}${"ABCDE".mkString("   ")}\n" + 
+        s"${" " * 4}${"-" * 21}${" " * 4}\n" + 
+        mainField.zipWithIndex.map[String] {
+            case (mainFieldLine, i) => s"  ${i + 1} |${mainFieldLine.map[String] {
+                koma => koma match {
+                    case _: Koma => s" ${koma.color}${koma.icon}${RESET} "
+                    case _       => s"   "
+                }
+            }.mkString("|")}|\n"
+        }.mkString(s"${" " * 4}${"-" * 21}\n") + 
+        s"${" " * 4}${"-" * 21}\n" + 
+        s"\n${"=" * 29}\n" + 
+        s"${(nowPlayer.own_koma.map[String] {
+            case (icon, count) => s"${nowPlayer.color}${icon}:${count}${RESET}"
+        }).mkString(" ")}${" " * 18}\n" + 
+        s"${"=" * 29}\n"
+    }
 }
 
-class Player(val name: String, val color: String)
+class Player(val name: String, val color: String) {
+    val own_koma: mutable.Map[Char, Int] = mutable.Map('H' -> 0, 'N' -> 0, 'I' -> 0)
+}
 
 object Main extends App {
-    val playFirst = new Player("Penguin", "Green")
-    val drawFirst = new Player("Tokage", "Blue")
+    val playFirst = new Player("Penguin", GREEN)
+    val drawFirst = new Player("Tokage", BLUE)
 
-    val g2as = new Gorox2AnimalSyogi(playFirst, drawFirst)
+    val g2as = new Gorox2AnimalSyogi(playFirst.color, drawFirst.color)
+    println(g2as.makeField(playFirst, drawFirst))
 }
