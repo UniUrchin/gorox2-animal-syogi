@@ -1,2 +1,4 @@
 # Compiled class file
-*.class
+.bsp
+project/target/*
+target/*
