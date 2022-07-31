@@ -45,16 +45,26 @@ class Gorox2AnimalSyogi(
 
   private final val FIELD_SIZE = 35
 
-  private var reverse = true
+  private var reverse = false
 
   private val mainField: Array[Array[Koma]] = Array(
-    Array(neko(drawFirst.color), inu(drawFirst.color), raion(drawFirst.color), inu(drawFirst.color), neko(drawFirst.color)),
+    Array(neko(BLUE), inu(BLUE), raion(BLUE), inu(BLUE), neko(BLUE)),
     Array(null, null, null, null, null),
-    Array(null, hiyoko(drawFirst.color), hiyoko(drawFirst.color), hiyoko(drawFirst.color), null),
-    Array(null, hiyoko(playFirst.color), hiyoko(playFirst.color), hiyoko(playFirst.color), null),
+    Array(null, hiyoko(BLUE), hiyoko(BLUE), hiyoko(BLUE), null),
+    Array(null, hiyoko(GREEN), hiyoko(GREEN), hiyoko(GREEN), null),
     Array(null, null, null, null, null),
-    Array(neko(playFirst.color), inu(playFirst.color), raion(playFirst.color), inu(playFirst.color), neko(playFirst.color))
+    Array(neko(GREEN), inu(GREEN), raion(GREEN), inu(GREEN), neko(GREEN))
   )
+
+  // def moveKoma(bx: Int, by: Int, ax: Int, ay: Int): Bool {
+  //   if mainField(bx)(by).isMovable(bx, by, ax, ay) {
+  //     match 
+  //     mainField(ax)(ay) = mainField(bx)(by)
+  //     mainField(bx)(by) = null
+  //   } else {
+  //     false
+  //   }
+  // }
 
   def makeField: String = {
     var strField = new String
