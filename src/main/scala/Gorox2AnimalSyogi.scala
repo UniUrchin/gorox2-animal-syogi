@@ -3,9 +3,20 @@ package gorox2animalsyogi
 import scala.collection.mutable
 import Console.{GREEN, BLUE, RESET}
 
+sealed trait Gorox2Error
+
+case object FallOutFromField extends Gorox2Error // コマを移動させる際に、盤外に落ちてしまうようなコマの移動先を指定した
+case object ImpposibleMotion extends Gorox2Error // コマを移動させる際に、選択したコマでは不可能な移動先を指定した
+case object NonExistingField extends Gorox2Error // 移動したいコマを選択する際に、盤外が指定された
+case object NonExistingKoma extends Gorox2Error // 移動したいコマを選択する際に、指定された座標にコマが存在しなかった
+case object SelectEnemyKoma extends Gorox2Error // 移動したいコマを選択する際に、敵チームのコマを指定した
+case object SelectOwnKoma extends Gorox2Error // コマを移動させる際に、既に味方チームのコマがいる移動先を指定した
+
 class Gorox2AnimalSyogi(pfName: String, dfName: String) {
   private class Player(val name: String, val color: String) {
     val ownKoma: mutable.Map[Char, Int] = mutable.Map('H' -> 0, 'N' -> 0, 'I' -> 0)
+    
+    def getEnemyKoma(icon: Char): Unit = ownKoma += (icon -> (ownKoma(icon) + 1))
   }
 
   sealed abstract class Koma {
@@ -56,23 +67,35 @@ class Gorox2AnimalSyogi(pfName: String, dfName: String) {
     Array(Neko(GREEN), Inu(GREEN), Raion(GREEN), Inu(GREEN), Neko(GREEN))
   )
 
-  // def moveKoma(nowPos: (Int, Int), nextPos: (Int, Int)): Either[Gorox2Error, Unit] = {
-  //   val (nowPosX, nowPosY) = nowPos
-  //   val (nextPosX, nextPosY) = nextPos
-  //   if (nowPosX < 0 || nowPosX > 5 || nowPosY < 0 || nowPosY > 6) return Left(InputInvalidValue)
-  //   val nowKoma = mainField(nowPosX)(nowPosY) match {
-  //     case koma: Koma => koma
-  //     case _ => return Left(NonExistingKoma)
-  //   }
-  //   val diffPosX = nextPosX - nowPosX
-  //   val diffPosY = nextPosY - nowPosY
-  //   if (!(nowKoma.movable.contains((diffPosX, diffPosY)))) return Left(ImpposibleMotion)
-  //   val nextKoma = mainField(nextPosX)(nextPosY)
-  //   Right(())
-  // }
+  def moveKoma(nowPos: (Int, Int), nextPos: (Int, Int)): Either[Gorox2Error, Unit] = {
+    val nowPlayerColor = if (reverse) drawFirst.color else playFirst.color
+    val (nowPosX, nowPosY) = nowPos
+    val (nextPosX, nextPosY) = nextPos
+    val diffPosX = if (reverse) nextPosX - nowPosX else (nextPosX - nowPosX) * (-1)
+    val diffPosY = if (reverse) nextPosY - nowPosY else (nextPosY - nowPosY) * (-1) 
+
+    if (nowPosX < 0 || nowPosX > 4 || nowPosY < 0 || nowPosY > 5) return Left(NonExistingField)
+    val nowKoma = mainField(nowPosY)(nowPosX) match {
+      case koma: Koma => if (nowPlayerColor == koma.color) koma else return Left(SelectEnemyKoma)
+      case _ => return Left(NonExistingKoma)
+    }
+    if (!(nowKoma.movable.contains((diffPosX, diffPosY)))) return Left(ImpposibleMotion)
+    if (nextPosX < 0 || nextPosX > 4 || nextPosY < 0 || nextPosY > 5) return Left(FallOutFromField)
+    mainField(nextPosY)(nextPosX) match {
+      case koma: Koma => {
+        if (nowPlayerColor != koma.color) koma else return Left(SelectOwnKoma)
+        if (reverse) drawFirst.getEnemyKoma(koma.icon) else playFirst.getEnemyKoma(koma.icon)
+      }
+      case _ => null
+    }
+    mainField(nowPosY)(nowPosX) = null
+    mainField(nextPosY)(nextPosX) = nowKoma
+    Right(())
+  }
 
   def makeField: String = {
     var strField = new String
+
     strField += s"${"=" * FIELD_SIZE}\n"
     strField += s"${if (reverse) makeSubField(playFirst) else makeSubField(drawFirst)}"
     strField += s"${"=" * FIELD_SIZE}\n"
@@ -108,11 +131,3 @@ class Gorox2AnimalSyogi(pfName: String, dfName: String) {
     s"${RESET}\n"
   }
 }
-
-sealed trait Gorox2Error
-
-case object NonExistingKoma extends Gorox2Error
-case object ImpposibleMotion extends Gorox2Error
-case object InputInvalidValue extends Gorox2Error
-case object FallOutFromField extends Gorox2Error
-case object HitWithTeammate extends Gorox2Error
