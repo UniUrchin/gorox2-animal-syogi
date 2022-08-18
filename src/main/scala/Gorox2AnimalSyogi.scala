@@ -5,18 +5,19 @@ import Console.{GREEN, BLUE, RESET}
 
 sealed trait Gorox2Error
 
+case object AlreadyExistingKoma extends Gorox2Error // コマを配置する際に、既にコマが存在する配置先を指定した
 case object FallOutFromField extends Gorox2Error // コマを移動させる際に、盤外に落ちてしまうようなコマの移動先を指定した
 case object ImpposibleMotion extends Gorox2Error // コマを移動させる際に、選択したコマでは不可能な移動先を指定した
-case object NonExistingField extends Gorox2Error // 移動したいコマを選択する際に、盤外が指定された
+case object NonExistingIcon extends Gorox2Error // コマを配置する際に、存在しないアイコンを指定した
 case object NonExistingKoma extends Gorox2Error // 移動したいコマを選択する際に、指定された座標にコマが存在しなかった
+case object NonExistingOwnKoma extends Gorox2Error // コマを配置する際に、1つも持っていないコマを指定した
 case object SelectEnemyKoma extends Gorox2Error // 移動したいコマを選択する際に、敵チームのコマを指定した
 case object SelectOwnKoma extends Gorox2Error // コマを移動させる際に、既に味方チームのコマがいる移動先を指定した
+case object SpecifiedOutSideBoard extends Gorox2Error // 移動したいコマ、もしくは配置先を選択する際に、盤外が指定された
 
 class Gorox2AnimalSyogi(pfName: String, dfName: String) {
   private class Player(val name: String, val color: String) {
     val ownKoma: mutable.Map[Char, Int] = mutable.Map('H' -> 0, 'N' -> 0, 'I' -> 0)
-    
-    def getEnemyKoma(icon: Char): Unit = ownKoma += (icon -> (ownKoma(icon) + 1))
   }
 
   sealed abstract class Koma {
@@ -70,7 +71,7 @@ class Gorox2AnimalSyogi(pfName: String, dfName: String) {
     val diffPosX = if (nowPlayer == playFirst) (nextPosX - nowPosX) * (-1) else nextPosX - nowPosX
     val diffPosY = if (nowPlayer == playFirst) (nextPosY - nowPosY) * (-1) else nextPosY - nowPosY 
 
-    if (nowPosX < 0 || nowPosX > 4 || nowPosY < 0 || nowPosY > 5) return Left(NonExistingField)
+    if (nowPosX < 0 || nowPosX > 4 || nowPosY < 0 || nowPosY > 5) return Left(SpecifiedOutSideBoard)
     val nowKoma = mainField(nowPosY)(nowPosX) match {
       case koma: Koma => if (nowPlayer.color == koma.color) koma else return Left(SelectEnemyKoma)
       case _ => return Left(NonExistingKoma)
@@ -83,24 +84,51 @@ class Gorox2AnimalSyogi(pfName: String, dfName: String) {
         if (nowPlayer == playFirst) {
           koma.icon match {
             case 'R' => println("GameSet!!")
-            case 'T' => playFirst.getEnemyKoma('H')
-            case _ => playFirst.getEnemyKoma(koma.icon)
+            case 'T' => playFirst.ownKoma += ('H' -> (playFirst.ownKoma('H') + 1))
+            case _ => playFirst.ownKoma += (koma.icon -> (playFirst.ownKoma(koma.icon) + 1))
           }
         } else {
           koma.icon match {
             case 'R' => println("GameSet!!")
-            case 'T' => drawFirst.getEnemyKoma('H')
-            case _ => drawFirst.getEnemyKoma(koma.icon)
+            case 'T' => drawFirst.ownKoma += ('H' -> (drawFirst.ownKoma('H') + 1))
+            case _ => drawFirst.ownKoma += (koma.icon -> (drawFirst.ownKoma(koma.icon) + 1))
           }
         }
-
       }
-      case _ => null
+      case _ => ()
     }
     mainField(nowPosY)(nowPosX) = null
     mainField(nextPosY)(nextPosX) = nowKoma
     Right(())
   }
+
+  def placeKoma(icon: Char, nextPos: (Int, Int)): Either[Gorox2Error, Unit] = {
+    val (nextPosX, nextPosY) = nextPos
+    val nextKoma = icon match {
+      case 'H' => Hiyoko(nowPlayer.color)
+      case 'I' => Inu(nowPlayer.color)
+      case 'N' => Neko(nowPlayer.color)
+      case _ => return Left(NonExistingIcon)
+    }
+
+    if (nextPosX < 0 || nextPosX > 4 || nextPosY < 0 || nextPosY > 5) return Left(SpecifiedOutSideBoard)
+    mainField(nextPosY)(nextPosX) match {
+      case koma: Koma => return Left(AlreadyExistingKoma)
+      case _ => {
+        if (nowPlayer == playFirst) {
+          if (playFirst.ownKoma(icon) == 0) return Left(NonExistingOwnKoma)
+          playFirst.ownKoma += (icon -> (playFirst.ownKoma(icon) - 1))
+        } else {
+          if (drawFirst.ownKoma(icon) == 0) return Left(NonExistingOwnKoma)
+          drawFirst.ownKoma += (icon -> (drawFirst.ownKoma(icon) - 1))
+        }
+        mainField(nextPosY)(nextPosX) = nextKoma
+      }
+    }
+    Right(())
+  }
+
+  def changeTurn(): Unit = nowPlayer = if (nowPlayer == playFirst) drawFirst else playFirst
 
   def makeField(reverse: Boolean): String = {
     var strField = new String
@@ -119,8 +147,6 @@ class Gorox2AnimalSyogi(pfName: String, dfName: String) {
     strField += s"${"=" * FIELD_SIZE}\n"
     strField
   }
-
-  def changeTurn(): Unit = nowPlayer = if (nowPlayer == playFirst) drawFirst else playFirst
 
   private def makeMainField(reverse: Boolean): String = {
     val mainField = if (reverse) this.mainField.zipWithIndex.reverse else this.mainField.zipWithIndex
