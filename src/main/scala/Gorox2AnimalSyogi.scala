@@ -53,11 +53,8 @@ class Gorox2AnimalSyogi(pfName: String, dfName: String) {
   private final val FIELD_SIZE = 35
 
   private val playFirst: Player = new Player(pfName, GREEN)
-
   private val drawFirst: Player = new Player(dfName, BLUE)
-
-  private var reverse = false
-
+  private var nowPlayer: Player = playFirst
   private val mainField: Array[Array[Koma]] = Array(
     Array(Neko(BLUE), Inu(BLUE), Raion(BLUE), Inu(BLUE), Neko(BLUE)),
     Array(null, null, null, null, null),
@@ -68,23 +65,35 @@ class Gorox2AnimalSyogi(pfName: String, dfName: String) {
   )
 
   def moveKoma(nowPos: (Int, Int), nextPos: (Int, Int)): Either[Gorox2Error, Unit] = {
-    val nowPlayerColor = if (reverse) drawFirst.color else playFirst.color
     val (nowPosX, nowPosY) = nowPos
     val (nextPosX, nextPosY) = nextPos
-    val diffPosX = if (reverse) nextPosX - nowPosX else (nextPosX - nowPosX) * (-1)
-    val diffPosY = if (reverse) nextPosY - nowPosY else (nextPosY - nowPosY) * (-1) 
+    val diffPosX = if (nowPlayer == playFirst) (nextPosX - nowPosX) * (-1) else nextPosX - nowPosX
+    val diffPosY = if (nowPlayer == playFirst) (nextPosY - nowPosY) * (-1) else nextPosY - nowPosY 
 
     if (nowPosX < 0 || nowPosX > 4 || nowPosY < 0 || nowPosY > 5) return Left(NonExistingField)
     val nowKoma = mainField(nowPosY)(nowPosX) match {
-      case koma: Koma => if (nowPlayerColor == koma.color) koma else return Left(SelectEnemyKoma)
+      case koma: Koma => if (nowPlayer.color == koma.color) koma else return Left(SelectEnemyKoma)
       case _ => return Left(NonExistingKoma)
     }
     if (!(nowKoma.movable.contains((diffPosX, diffPosY)))) return Left(ImpposibleMotion)
     if (nextPosX < 0 || nextPosX > 4 || nextPosY < 0 || nextPosY > 5) return Left(FallOutFromField)
     mainField(nextPosY)(nextPosX) match {
       case koma: Koma => {
-        if (nowPlayerColor != koma.color) koma else return Left(SelectOwnKoma)
-        if (reverse) drawFirst.getEnemyKoma(koma.icon) else playFirst.getEnemyKoma(koma.icon)
+        if (nowPlayer.color == koma.color) return Left(SelectOwnKoma)
+        if (nowPlayer == playFirst) {
+          koma.icon match {
+            case 'R' => println("GameSet!!")
+            case 'T' => playFirst.getEnemyKoma('H')
+            case _ => playFirst.getEnemyKoma(koma.icon)
+          }
+        } else {
+          koma.icon match {
+            case 'R' => println("GameSet!!")
+            case 'T' => drawFirst.getEnemyKoma('H')
+            case _ => drawFirst.getEnemyKoma(koma.icon)
+          }
+        }
+
       }
       case _ => null
     }
@@ -93,7 +102,7 @@ class Gorox2AnimalSyogi(pfName: String, dfName: String) {
     Right(())
   }
 
-  def makeField: String = {
+  def makeField(reverse: Boolean): String = {
     var strField = new String
 
     strField += s"${"=" * FIELD_SIZE}\n"
@@ -102,7 +111,7 @@ class Gorox2AnimalSyogi(pfName: String, dfName: String) {
     strField += s"\n"
     strField += s"${" " * ((FIELD_SIZE - 17) / 2)}${(if (reverse) "EDCBA" else "ABCDE").mkString("   ")}\n"
     strField += s"${" " * ((FIELD_SIZE - 21) / 2)}${"-" * (FIELD_SIZE - 14)}\n"
-    strField += makeMainField
+    strField += makeMainField(reverse)
     strField += s"${" " * ((FIELD_SIZE - 21) / 2)}${"-" * (FIELD_SIZE - 14)}\n"
     strField += s"\n"
     strField += s"${"=" * FIELD_SIZE}\n"
@@ -111,7 +120,9 @@ class Gorox2AnimalSyogi(pfName: String, dfName: String) {
     strField
   }
 
-  private def makeMainField: String = {
+  def changeTurn(): Unit = nowPlayer = if (nowPlayer == playFirst) drawFirst else playFirst
+
+  private def makeMainField(reverse: Boolean): String = {
     val mainField = if (reverse) this.mainField.zipWithIndex.reverse else this.mainField.zipWithIndex
     mainField.map[String] { case (line, i) => 
       val mainFieldLine = if (reverse) line.reverse else line
