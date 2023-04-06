@@ -1,3 +1,4 @@
 .bsp
+.vscode
 project/target/*
-target/*
+target

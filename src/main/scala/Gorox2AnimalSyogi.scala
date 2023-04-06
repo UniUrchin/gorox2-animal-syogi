@@ -30,7 +30,6 @@ class Gorox2AnimalSyogi(pfName: String, dfName: String) {
     val icon: Char
     val color: String
     val movable: List[(Int, Int)]
-    var upgradeFrag = false
   }
 
   case class Raion(val color: String) extends Koma {
@@ -68,6 +67,7 @@ class Gorox2AnimalSyogi(pfName: String, dfName: String) {
   private val playFirst: Player = new Player(pfName.take(FIELD_SIZE - 12), GREEN)
   private val drawFirst: Player = new Player(dfName.take(FIELD_SIZE - 12), BLUE)
   private var nowPlayer: Player = playFirst
+  private var upgradeKomaPos: Option((Int, Int)) = None
   private val mainField: Array[Array[Koma]] = Array(
     Array(Neko(drawFirst.color), Inu(drawFirst.color), Raion(drawFirst.color), Inu(drawFirst.color), Neko(drawFirst.color)),
     Array(null, null, null, null, null),
@@ -113,14 +113,9 @@ class Gorox2AnimalSyogi(pfName: String, dfName: String) {
     }
     mainField(nowPosY)(nowPosX) = null
     mainField(nextPosY)(nextPosX) = nowKoma
-    mainField(nextPosY)(nextPosX) match {
-      case koma @ (Hiyoko(_) | Neko(_)) => {
-        if (upgradeCheck(nowPosY, nextPosY)) {
-          koma.upgradeFrag = true
-          return Right(Some(UpgradePossible))
-        }
-      }
-      case _ => ()
+    if upgradeCheck(nowKoma.icon, nowPosY, nextPosY) {
+      upgradeKomaPos = ((nextPosY, nextPosX))
+      return Right(Some(UpgradePossible))
     }
     Right(None)
   }
@@ -150,7 +145,8 @@ class Gorox2AnimalSyogi(pfName: String, dfName: String) {
     }
     Right(())
   }
-
+  
+  // 成れるコマのリストをメンバに持たせて消す方が早そう
   def upgradeKoma(nowPos: (Int, Int)): Either[Gorox2Error, Unit] = {
     val (nowPosX, nowPosY) = nowPos
 
@@ -165,13 +161,19 @@ class Gorox2AnimalSyogi(pfName: String, dfName: String) {
 
   def changeTurn(): Unit = {
     nowPlayer = if (nowPlayer == playFirst) drawFirst else playFirst
+    mainField.foreach
   }
 
-  private def upgradeCheck(nowPosY: Int, nextPosY: Int): Boolean = {
-    if (nowPlayer == playFirst) {
-      if ((nowPosY == 2 && nextPosY == 1) || (nowPosY == 1 && nextPosY == 2) || (nowPosY <= 1 && nextPosY <= 1)) true else false
-    } else {
-      if ((nowPosY == 3 && nextPosY == 4) || (nowPosY == 4 && nextPosY == 3) || (nowPosY >= 4 && nextPosY >= 4)) true else false
+  private def upgradeCheck(icon: Char, nowPosY: Int, nextPosY: Int): Boolean = {
+    icon match {
+      case 'H' | 'N' => {
+        if (nowPlayer == playFirst) {
+          if ((nowPosY == 2 && nextPosY == 1) || (nowPosY == 1 && nextPosY == 2) || (nowPosY <= 1 && nextPosY <= 1)) true else false
+        } else {
+          if ((nowPosY == 3 && nextPosY == 4) || (nowPosY == 4 && nextPosY == 3) || (nowPosY >= 4 && nextPosY >= 4)) true else false
+        }
+      }
+      case _ => false
     }
   }
 
