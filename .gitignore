@@ -1,4 +1,9 @@
 .bsp
+.bloop
+.metals
 .vscode
-project/target/*
+project/target
+project/bloop
+project/project
+project/metals.sbt
 target

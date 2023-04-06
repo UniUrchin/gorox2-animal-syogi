@@ -67,7 +67,7 @@ class Gorox2AnimalSyogi(pfName: String, dfName: String) {
   private val playFirst: Player = new Player(pfName.take(FIELD_SIZE - 12), GREEN)
   private val drawFirst: Player = new Player(dfName.take(FIELD_SIZE - 12), BLUE)
   private var nowPlayer: Player = playFirst
-  private var upgradeKomaPos: Option((Int, Int)) = None
+  private var upgradeKomaPos: Option[(Int, Int)] = None
   private val mainField: Array[Array[Koma]] = Array(
     Array(Neko(drawFirst.color), Inu(drawFirst.color), Raion(drawFirst.color), Inu(drawFirst.color), Neko(drawFirst.color)),
     Array(null, null, null, null, null),
